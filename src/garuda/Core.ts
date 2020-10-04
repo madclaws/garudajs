@@ -62,7 +62,7 @@ export class Core {
   }
   
   private connectToSocket() {
-    this.socket = new Socket(this.socketUrl, {playerId: this.playerId});
+    this.socket = new Socket(this.socketUrl, {params: {playerId: this.playerId}});
     this.socket.connect();
     return this.socket;
   }
