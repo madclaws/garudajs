@@ -10,7 +10,6 @@ export interface IConnectionConfig {
 
 export interface IJoinRoom {
   maxPlayers?: number;
-  playerId?: string;
   matchId?: string;
 }
 
