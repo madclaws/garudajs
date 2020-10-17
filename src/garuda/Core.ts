@@ -23,27 +23,47 @@ export class Core {
   }
 
   public getGameChannel(roomName: string, params: IJoinRoom, callbackFunction: any) {
-    let maxPlayer = params.maxPlayers ? params.maxPlayers : 2;
-    let playerId = params.playerId ? params.playerId : this.playerId;
     let matchmakerChannelName: string;
+    let mode = params.mode || "default";
+    let maxPlayer = params.maxPlayers || 2;
     this.gameRoomName = roomName;
-    if (params.matchId) {
-      matchmakerChannelName = "garuda_matchmaker:" + params.matchId + ":" + roomName + ":" + maxPlayer;
-      this.matchId = params.matchId;
-    } else {
-      matchmakerChannelName = "garuda_matchmaker:" + roomName + ":" + maxPlayer;
-      this.matchId = "";
+
+    switch (mode){
+      case "default":
+        if (params.matchId) {
+          matchmakerChannelName = "garuda_matchmaker:" + params.matchId + ":" + roomName + ":" + maxPlayer;
+          this.matchId = params.matchId;
+        } else {
+          matchmakerChannelName = "garuda_matchmaker:" + roomName + ":" + maxPlayer;
+          this.matchId = "";
+        }
+        break
+      case "create":
+        matchmakerChannelName = "garuda_matchmaker:" + params.matchId + ":" + roomName;
+        this.matchId = params.matchId;
+        break
+      case "join":
+        matchmakerChannelName = "garuda_matchmaker:" + params.matchId + ":" + roomName;
+        this.matchId = params.matchId;
+        break
+      default:
+        break
+
     }
     let matchSendInfo: IMatchSendInfo = {
       player_count: maxPlayer,
-      player_id: playerId,
       room_name: matchmakerChannelName,
       match_id: this.matchId,
+      mode
     }
     this.matchmakerChannel = this.socket.channel(matchmakerChannelName, matchSendInfo);
     this.matchmakerChannel.join()
-      .receive("ok", resp => {console.log("Joined matchmaker")})
-      .receive("error", resp => {throw Error("unable to join matchmaker");});
+      .receive("ok", resp => {console.log("Joined matchmaker", resp); return "ok"})
+      .receive("error", resp => {
+        console.log("Error joining matchmaker", resp);
+        this.matchmakerChannel.leave()
+        return "error"
+      });
   
     this.matchmakerChannel.on("match_maker_event", (message) => {
         console.log("On match maker event", message);
@@ -58,12 +78,12 @@ export class Core {
     Manage configs, that will be used for socket connections
   */
   private setupConfigs(connConfig: IConnectionConfig) {
-    this.playerId = "gda_anon_" + getRandomId();
+    this.playerId = connConfig.playerId||"gda_anon_" + getRandomId();
     this.socketUrl = connConfig.socketUrl;
   }
   
   private connectToSocket() {
-    this.socket = new Socket(this.socketUrl);
+    this.socket = new Socket(this.socketUrl,{params: {playerId: this.playerId}});
     this.socket.connect();
     return this.socket;
   }

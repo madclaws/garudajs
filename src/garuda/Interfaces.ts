@@ -5,17 +5,18 @@
 
 export interface IConnectionConfig {
   socketUrl: string;
+  playerId?:string
 }
 
 export interface IJoinRoom {
   maxPlayers?: number;
-  playerId?: string;
   matchId?: string;
+  mode?: string
 }
 
 export interface IMatchSendInfo {
   player_count: number, 
-  player_id: string,
   room_name: string,
-  match_id?: string
+  match_id?: string,
+  mode: string
 }
