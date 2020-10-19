@@ -22,29 +22,43 @@ export class Core {
     this.gameChannel.leave();
   }
 
+
+  // public getOpenRooms(roomName: string){
+  //   console.log("DSB: Core -> getOpenRooms -> this.matchmakerChannel", this.matchmakerChannel);
+  //   this.matchmakerChannel.push(
+  //     "get_open_rooms", {room_name: roomName}
+  //   )
+  //   this.matchmakerChannel.on("open_rooms", (message) => {
+  //     console.log("GAME ROOMS", message);
+  //     // callbackFunction(this.gameChannel, message);
+  // });
+  // }
+
   public getGameChannel(roomName: string, params: IJoinRoom, callbackFunction: any) {
     let matchmakerChannelName: string;
     let mode = params.mode || "default";
     let maxPlayer = params.maxPlayers || 2;
+    console.log("DSB: Core -> getGameChannel -> maxPlayer", maxPlayer);
     this.gameRoomName = roomName;
 
     switch (mode){
       case "default":
         if (params.matchId) {
-          matchmakerChannelName = "garuda_matchmaker:" + params.matchId + ":" + roomName + ":" + maxPlayer;
+          matchmakerChannelName = `garuda_matchmaker:${params.matchId}:${roomName}:${maxPlayer}` ;
           this.matchId = params.matchId;
         } else {
-          matchmakerChannelName = "garuda_matchmaker:" + roomName + ":" + maxPlayer;
+          matchmakerChannelName = `garuda_matchmaker:${roomName}:${maxPlayer}` ;
           this.matchId = "";
         }
         break
       case "create":
-        matchmakerChannelName = "garuda_matchmaker:" + params.matchId + ":" + roomName;
+        matchmakerChannelName = `garuda_matchmaker:${params.matchId}:${roomName}:createjoin` ;
         this.matchId = params.matchId;
         break
       case "join":
-        matchmakerChannelName = "garuda_matchmaker:" + params.matchId + ":" + roomName;
+        matchmakerChannelName = `garuda_matchmaker:${params.matchId}:${roomName}:createjoin` ;
         this.matchId = params.matchId;
+        maxPlayer = -1
         break
       default:
         break
