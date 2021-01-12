@@ -44,7 +44,7 @@ export class Core {
 
     switch (mode){
       case "default":
-        matchmakerChannelName = `garuda_neo_matchmaker:lobby` ;
+        matchmakerChannelName = `garuda_matchmaker:lobby` ;
         this.matchId = params.matchId || "";
         break
       case "create":
