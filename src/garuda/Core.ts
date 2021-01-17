@@ -1,8 +1,7 @@
 
 import {Socket} from "phoenix";
-import { IConnectionConfig, IJoinRoom, IMatchSendInfo, INeoMatchSendInfo } from "./Interfaces";
+import { IConnectionConfig, IJoinRoom, IMatchSendInfo} from "./Interfaces";
 import { getRandomId } from "./Utils";
-import { SERVER_EVENT, gzp_encode, gzp_decode } from "./Constants";
 
 export class Core {
   private socket: any; // websocket object
@@ -12,91 +11,58 @@ export class Core {
   private matchId: string;
   private gameChannel: any;
   private gameRoomName: string;
-  private isGameRoomJoined: boolean = false;
   public constructor(connConfig: IConnectionConfig) {
     this.setupConfigs(connConfig);
     this.connectToSocket();
     this.registerEvents();
   }
 
+  /**
+   * Leaves the game channel.
+   */
   public leaveGameChannel() {
     this.gameChannel.leave();
   }
 
-
-  // public getOpenRooms(roomName: string){
-  //   console.log("DSB: Core -> getOpenRooms -> this.matchmakerChannel", this.matchmakerChannel);
-  //   this.matchmakerChannel.push(
-  //     "get_open_rooms", {room_name: roomName}
-  //   )
-  //   this.matchmakerChannel.on("open_rooms", (message) => {
-  //     console.log("GAME ROOMS", message);
-  //     // callbackFunction(this.gameChannel, message);
-  // });
-  // }
-
-  public getGameChannel(roomName: string, params: IJoinRoom, callbackFunction: any) {
-    let matchmakerChannelName: string;
-    let mode = params.mode || "default";
-    let maxPlayer = params.maxPlayers || 2;
-    console.log("DSB: Core -> getGameChannel -> maxPlayer", maxPlayer);
+  /**
+   * Joins the game channel, and call the callback function with the join status ("ok" or "error"), 
+   * and gameChannel reference, which we can use it as a regualar phoenix channel object.
+   * @param roomName - Name of game specified in user-socket
+   * @param params  - Join speciif params
+   * @param callbackFunction - Function to call on joining game-channel.
+   */
+  public joinGameChannel(roomName: string, params: IJoinRoom, callbackFunction: any) {
+    const maxPlayer: number = params.maxPlayers || 1;
     this.gameRoomName = roomName;
-
-    switch (mode){
-      case "default":
-        matchmakerChannelName = `garuda_matchmaker:lobby` ;
-        this.matchId = params.matchId || "";
-        break
-      case "create":
-        matchmakerChannelName = `garuda_matchmaker:${params.matchId}:${roomName}:createjoin` ;
-        this.matchId = params.matchId;
-        break
-      case "join":
-        matchmakerChannelName = `garuda_matchmaker:${params.matchId}:${roomName}:createjoin` ;
-        this.matchId = params.matchId;
-        maxPlayer = -1
-        break
-      default:
-        break
-
-    }
-   /*  let matchSendInfo: IMatchSendInfo = {
-      player_count: maxPlayer,
-      room_name: matchmakerChannelName,
-      match_id: this.matchId,
-      mode
-    } */
-
-    let matchSendInfo: INeoMatchSendInfo = {
+    const matchmakerChannelName: string = `garuda_matchmaker:lobby` ;
+    this.matchId = params.matchId || "";
+    const metadata = params.metadata || {};
+    const matchSendInfo: IMatchSendInfo = {
       max_players: maxPlayer,
       room_name: this.gameRoomName,
       match_id: this.matchId,
       player_id: this.playerId
     }
     
-    console.log("🚀 ~ file: Core.ts ~ line 68 ~ Core ~ getGameChannel ~ matchSendInfo", matchSendInfo)
     this.matchmakerChannel = this.socket.channel(matchmakerChannelName, matchSendInfo);
     this.matchmakerChannel.join()
-      .receive("ok", resp => {console.log("Joined matchmaker", resp); 
+      .receive("ok", resp => { 
         this.matchmakerChannel.leave();
-        this.matchId = resp;
-        this.gameChannel = this.socket.channel("room_" + this.gameRoomName + ":" + this.matchId, {max_players: maxPlayer});
-        callbackFunction(this.gameChannel, resp);
-        return "ok"
+        this.matchId = resp.match_id;
+        this.gameChannel = this.socket.channel("room_" + this.gameRoomName + ":" + this.matchId, {metadata: metadata, max_players: maxPlayer});
+        this.gameChannel.join()
+        .receive("ok", () => {
+          callbackFunction("ok", this.gameChannel);
+        })
+        .receive("error", () => {
+          callbackFunction("error", this.gameChannel);
+        })
       })
       .receive("error", resp => {
         console.log("Error joining matchmaker", resp);
         this.matchmakerChannel.leave()
-        return "error"
+        callbackFunction("error", undefined);
       });
-  
-    this.matchmakerChannel.on("match_maker_event", (message) => {
-        console.log("On match maker event", message);
-        this.matchmakerChannel.leave();
-        this.matchId = message["match_id"];
-        this.gameChannel = this.matchId?this.socket.channel("room_" + this.gameRoomName + ":" + this.matchId):undefined;
-        callbackFunction(this.gameChannel, message);
-    });
   }
 
   /* 
@@ -110,17 +76,19 @@ export class Core {
   private connectToSocket() {
     this.socket = new Socket(this.socketUrl,{params: {playerId: this.playerId}});
     this.socket.connect();
-    return this.socket;
   }
 
   private registerEvents(): void {
-    window.addEventListener("beforeunload", this.onClientUnload.bind(this));
-		window.addEventListener("unload", this.onClientUnload.bind(this));
+    window.addEventListener("beforeunload", () => {
+      this.onClientUnload();
+    });
+		window.addEventListener("unload", () => {
+      this.onClientUnload();
+    });
   }
 
   private onClientUnload(): void {
     this.gameChannel.leave();
   }
-  
 
 }
