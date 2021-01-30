@@ -1,2 +1,7 @@
 lib/
+<<<<<<< HEAD
 node_modules
+=======
+node_modules
+_bundles
+>>>>>>> v0.2.0

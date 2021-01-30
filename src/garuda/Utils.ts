@@ -3,5 +3,5 @@
 */
 
 export const getRandomId = () =>{
-  return Math.random().toFixed(5).split(".")[1]
+  return Math.random().toFixed(8).split(".")[1]
 }

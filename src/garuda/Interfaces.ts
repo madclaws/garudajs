@@ -1,21 +1,19 @@
 /* 
   Contains all the interfaces used in the project.
 */
-
-
 export interface IConnectionConfig {
   socketUrl: string;
-  playerId: string;
+  playerId?:string
 }
-
 export interface IJoinRoom {
   maxPlayers?: number;
   matchId?: string;
+  metadata?: any
 }
-
 export interface IMatchSendInfo {
-  player_count: number; 
-  player_id: string;
-  room_name: string;
-  match_id?: string;
+  max_players: number, 
+  room_name: string,
+  match_id?: string,
+  player_id: string
+  mode?: string
 }

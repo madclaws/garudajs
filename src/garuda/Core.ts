@@ -1,8 +1,7 @@
 
 import {Socket} from "phoenix";
-import { IConnectionConfig, IJoinRoom, IMatchSendInfo } from "./Interfaces";
+import { IConnectionConfig, IJoinRoom, IMatchSendInfo} from "./Interfaces";
 import { getRandomId } from "./Utils";
-import { SERVER_EVENT, gzp_encode, gzp_decode } from "./Constants";
 
 export class Core {
   private socket: any; // websocket object
@@ -12,59 +11,84 @@ export class Core {
   private matchId: string;
   private gameChannel: any;
   private gameRoomName: string;
-  private isGameRoomJoined: boolean = false;
   public constructor(connConfig: IConnectionConfig) {
     this.setupConfigs(connConfig);
     this.connectToSocket();
+    this.registerEvents();
   }
 
+  /**
+   * Leaves the game channel.
+   */
   public leaveGameChannel() {
     this.gameChannel.leave();
   }
 
-  public getGameChannel(roomName: string, params: IJoinRoom, callbackFunction: any) {
-    let maxPlayer = params.maxPlayers ? params.maxPlayers : 2;
-    let matchmakerChannelName: string;
+  /**
+   * Joins the game channel, and call the callback function with the join status ("ok" or "error"), 
+   * and gameChannel reference, which we can use it as a regualar phoenix channel object.
+   * @param roomName - Name of game specified in user-socket
+   * @param params  - Join speciif params
+   * @param callbackFunction - Function to call on joining game-channel.
+   */
+  public joinGameChannel(roomName: string, params: IJoinRoom, callbackFunction: any) {
+    const maxPlayer: number = params.maxPlayers || 1;
     this.gameRoomName = roomName;
-    if (params.matchId) {
-      matchmakerChannelName = "garuda_matchmaker:" + params.matchId + ":" + roomName + ":" + maxPlayer;
-      this.matchId = params.matchId;
-    } else {
-      matchmakerChannelName = "garuda_matchmaker:" + roomName + ":" + maxPlayer;
-      this.matchId = "";
-    }
-    let matchSendInfo: IMatchSendInfo = {
-      player_count: maxPlayer,
-      player_id: this.playerId,
-      room_name: matchmakerChannelName,
+    const matchmakerChannelName: string = `garuda_matchmaker:lobby` ;
+    this.matchId = params.matchId || "";
+    const metadata = params.metadata || {};
+    const matchSendInfo: IMatchSendInfo = {
+      max_players: maxPlayer,
+      room_name: this.gameRoomName,
       match_id: this.matchId,
-    };
+      player_id: this.playerId
+    }
+    
     this.matchmakerChannel = this.socket.channel(matchmakerChannelName, matchSendInfo);
     this.matchmakerChannel.join()
-      .receive("ok", resp => {console.log("Joined matchmaker"); })
-      .receive("error", resp => {throw Error("unable to join matchmaker"); });
-  
-    this.matchmakerChannel.on("match_maker_event", (message) => {
-        console.log("On match maker event", message);
+      .receive("ok", resp => { 
         this.matchmakerChannel.leave();
-        this.matchId = message["match_id"];
-        this.gameChannel = this.matchId ? this.socket.channel("room_" + this.gameRoomName + ":" + this.matchId) : undefined;
-        callbackFunction(this.gameChannel, message);
-    });
+        this.matchId = resp.match_id;
+        this.gameChannel = this.socket.channel("room_" + this.gameRoomName + ":" + this.matchId, {metadata: metadata, max_players: maxPlayer});
+        this.gameChannel.join()
+        .receive("ok", () => {
+          callbackFunction("ok", this.gameChannel);
+        })
+        .receive("error", () => {
+          callbackFunction("error", this.gameChannel);
+        })
+      })
+      .receive("error", resp => {
+        console.log("Error joining matchmaker", resp);
+        this.matchmakerChannel.leave()
+        callbackFunction("error", undefined);
+      });
   }
 
   /* 
     Manage configs, that will be used for socket connections
   */
   private setupConfigs(connConfig: IConnectionConfig) {
-    this.playerId = connConfig.playerId || "gda_anon_" + getRandomId();
+    this.playerId = connConfig.playerId||"gda_anon_" + getRandomId();
     this.socketUrl = connConfig.socketUrl;
   }
   
   private connectToSocket() {
-    this.socket = new Socket(this.socketUrl, {params: {playerId: this.playerId}});
+    this.socket = new Socket(this.socketUrl,{params: {playerId: this.playerId}});
     this.socket.connect();
-    return this.socket;
+  }
+
+  private registerEvents(): void {
+    window.addEventListener("beforeunload", () => {
+      this.onClientUnload();
+    });
+		window.addEventListener("unload", () => {
+      this.onClientUnload();
+    });
+  }
+
+  private onClientUnload(): void {
+    this.gameChannel.leave();
   }
 
 }

@@ -6,18 +6,15 @@
 ## Usage
 
     let garudaClient = new Garuda(ws://localhost:4000)
-Create garudaClient by giving the socket url as params
+Create client by giving the socket url as params
 
-    Garuda.getGameChannel("tictactoe", {player_count: 2}, onGameChannel)
+    Garuda.joinGameChannel("tictactoe", {max_players: 2}, onGameChannel)
 
-Returns a phoenix channel in the onGameChannel callback function, with the matchData.
+Returns a phoenix channel in the onGameChannel callback function.
 
     let gameChannel;
-    function onGameChannel(game_channel, matchData) {
-	    gameChannel = game_channel;
+    function onJoinRoom(channelJoinStatus gameChannel) {
+	    
     }
-    gameChannel.join()
-	    .recieve("ok" => {"joined game channel successfully})
-	    .receive("error" => {console.log("error")} 
 
-gameChannel then works like a normal phoenix channel object. We can use all the functions of a channel onto gameChannel also.
+gameChannel then works like a normal phoenix channel object. We can use all the functions of a channel object onto gameChannel also.
