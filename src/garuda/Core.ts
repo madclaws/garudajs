@@ -54,14 +54,13 @@ export class Core {
         .receive("ok", () => {
           callbackFunction("ok", this.gameChannel);
         })
-        .receive("error", () => {
-          callbackFunction("error", this.gameChannel);
+        .receive("error", (resp) => {
+          callbackFunction({"error": resp}, this.gameChannel);
         })
       })
       .receive("error", resp => {
-        console.log("Error joining matchmaker", resp);
         this.matchmakerChannel.leave()
-        callbackFunction("error", undefined);
+        callbackFunction({"error": resp}, undefined);
       });
   }
 
@@ -69,7 +68,7 @@ export class Core {
     Manage configs, that will be used for socket connections
   */
   private setupConfigs(connConfig: IConnectionConfig) {
-    this.playerId = connConfig.playerId||"gda_anon_" + getRandomId();
+    this.playerId = connConfig.playerId || "gda_anon_" + getRandomId();
     this.socketUrl = connConfig.socketUrl;
   }
   
