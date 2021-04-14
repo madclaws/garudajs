@@ -1,5 +1,6 @@
 
 import {Socket} from "phoenix";
+import { gzp_decode, gzp_encode } from "./Constants";
 import { IConnectionConfig, IJoinRoom, IMatchSendInfo} from "./Interfaces";
 import { getRandomId } from "./Utils";
 
@@ -73,7 +74,11 @@ export class Core {
   }
   
   private connectToSocket() {
-    this.socket = new Socket(this.socketUrl,{params: {playerId: this.playerId}});
+    this.socket = new Socket(this.socketUrl,{
+      encode: gzp_encode,
+      decode: gzp_decode,
+      params: {playerId: this.playerId}
+    });
     this.socket.connect();
   }
 

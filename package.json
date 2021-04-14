@@ -1,6 +1,6 @@
 {
   "name": "garudajs",
-  "version": "0.1.18",
+  "version": "0.1.19",
   "description": "Javascript client for Garuda framework",
   "main": "lib/index.js",
   "types": "lib/index.d.ts",
@@ -16,7 +16,8 @@
     "webpack-cli": "3.2.1"
   },
   "dependencies": {
-    "phoenix": "^1.5.4"
+    "phoenix": "^1.5.4",
+    "@msgpack/msgpack": "^1.9.3"
   },
   "scripts": {
     "build": "tsc",
